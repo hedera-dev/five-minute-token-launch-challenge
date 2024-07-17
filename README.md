@@ -2,7 +2,7 @@
 
 Intended to be used as a common starting point for demo repos for tutorials.
 
-<a href="https://gitpod.io/?autostart=true#https://github.com/hedera-dev/hedera-tutorial-demo-base-template" target="_blank" rel="noreferrer">
+<a href="https://gitpod.io/?autostart=true#https://github.com/hedera-dev/five-minute-token-launch-challenge" target="_blank" rel="noreferrer">
   <img src="./img/gitpod-open-button.svg" />
 </a>
 
