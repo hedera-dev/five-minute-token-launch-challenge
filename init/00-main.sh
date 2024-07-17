@@ -4,8 +4,8 @@ DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 cd ${DIR}/..
 npm install
-cp .env.sample .env
-cp .rpcrelay.env.sample .rpcrelay.env
+[ ! -f .env ] && .env.sample .env
+[ ! -f .rpcrelay.env ] && cp .rpcrelay.env.sample .rpcrelay.env
 
 cd ${DIR}
 

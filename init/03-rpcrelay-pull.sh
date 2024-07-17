@@ -1,5 +1,8 @@
 #!/bin/bash
 
+DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+node ${DIR}/07-metrics-message.js "rpcrelay-pull" "begin"
+
 # get specific tag name for latest RPC relay
 export RPC_RELAY_VERSION=$( curl -L \
   -H "Accept: application/vnd.github+json" \
@@ -14,3 +17,5 @@ export RPC_RELAY_DOCKER_IMAGE="ghcr.io/hashgraph/hedera-json-rpc-relay:${RPC_REL
 # run the RPC relay via its docker image
 docker pull \
   "${RPC_RELAY_DOCKER_IMAGE}"
+
+node ${DIR}/07-metrics-message.js "rpcrelay-pull" "complete"

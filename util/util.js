@@ -15,6 +15,7 @@ const DEFAULT_VALUES = {
     metricsAccountId: '0.0.4515983',
     metricsAccountKey: '3030020100300706052b8104000a0422042084ef968aa153ace24ed5a6299dfaa7c9e123be03a4ad95b937be3c1dc281aee6',
     metricsHcsTopicId: 'TODO',
+    metricsHcsTopicMemo: 'HTDBT-TODO',
 };
 
 const ANSI_ESCAPE_CODE_BLUE = '\x1b[34m%s\x1b[0m';
@@ -89,7 +90,7 @@ async function metricsTopicCreate() {
     } = await getMetricsConfig();
 
     const topicCreateTx = await new TopicCreateTransaction()
-        .setTopicMemo('HFW-METRICS')
+        .setTopicMemo(DEFAULT_VALUES.metricsHcsTopicMemo)
         .freezeWith(client);
     const topicCreateTxSigned = await topicCreateTx.sign(metricsAccountKeyObj);
     const topicCreateTxSubmitted = await topicCreateTxSigned.execute(client);
@@ -143,7 +144,7 @@ async function metricsTrackOnHcs(action, detail) {
     const topicMsgSubmitTxSubmitted = await topicMsgSubmitTxSigned.execute(client);
     const topicMsgSubmitTxReceipt = await topicMsgSubmitTxSubmitted.getReceipt(client);
     const topicMsgSeqNum = topicMsgSubmitTxReceipt.topicSequenceNumber;
-    console.log('Metrics HCS topic sequence number:', topicMsgSeqNum);
+    console.log('Metrics HCS topic sequence number:', topicMsgSeqNum.toString());
 
     client.close();
 }

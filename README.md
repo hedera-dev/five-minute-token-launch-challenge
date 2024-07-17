@@ -98,6 +98,11 @@ As a tutorial author:
 1. Create a new git remote - e.g. new repo on Github
 1. `git rm remote` of the existing git remote (this repo)
 1. `git add remote` of the new git remote (your new repo)
+1. Update `util/util.js` to edit values within `DEFAULT_VALUES`
+   - `metricsHcsTopicMemo` to a preferred value
+   - `metricsAccountId` and `metricsAccountKey` to an account dedicated to metrics logging
+1. Run `./init/06-metrics-topic.js`, then update values within `DEFAULT_VALUES`
+   - `metricsHcsTopicId` to the topic that was just created
 1. Add new files necessary for your tutorial
 1. Add instructions specific to how to answer the `main` script prompts to
    the `README.md` or wherever the tutorial text is published
