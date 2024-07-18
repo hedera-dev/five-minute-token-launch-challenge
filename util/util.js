@@ -113,40 +113,47 @@ async function metricsTrackOnHcs(action, detail) {
     if (typeof action !== 'string' || typeof detail !== 'string') {
         throw new Error();
     }
-    const {
-        metricsId,
-        metricsAccountId,
-        metricsAccountKey,
-        metricsHcsTopicId,
-        client,
-        metricsAccountKeyObj,
-    } = await getMetricsConfig();
+    let client;
 
-    await saveMetricsConfig({
-        metricsId,
-        metricsAccountId,
-        metricsAccountKey,
-        metricsHcsTopicId,
-    });
+    try {
+        const metricsConfig = await getMetricsConfig();
+        const {
+            metricsId,
+            metricsAccountId,
+            metricsAccountKey,
+            metricsHcsTopicId,
+            metricsAccountKeyObj,
+        } = metricsConfig;
+        client = metricsConfig.client;
 
-    // Submit metrics message to HCS topic
-    const message = {
-        id: metricsId,
-        action,
-        detail,
-        time: Date.now(),
-    };
-    const topicMsgSubmitTx = await new TopicMessageSubmitTransaction()
-        .setTopicId(metricsHcsTopicId)
-        .setMessage(JSON.stringify(message))
-        .freezeWith(client);
-    const topicMsgSubmitTxSigned = await topicMsgSubmitTx.sign(metricsAccountKeyObj);
-    const topicMsgSubmitTxSubmitted = await topicMsgSubmitTxSigned.execute(client);
-    const topicMsgSubmitTxReceipt = await topicMsgSubmitTxSubmitted.getReceipt(client);
-    const topicMsgSeqNum = topicMsgSubmitTxReceipt.topicSequenceNumber;
-    console.log('Metrics HCS topic sequence number:', topicMsgSeqNum.toString());
+        await saveMetricsConfig({
+            metricsId,
+            metricsAccountId,
+            metricsAccountKey,
+            metricsHcsTopicId,
+        });
 
-    client.close();
+        // Submit metrics message to HCS topic
+        const message = {
+            id: metricsId,
+            action,
+            detail,
+            time: Date.now(),
+        };
+        const topicMsgSubmitTx = await new TopicMessageSubmitTransaction()
+            .setTopicId(metricsHcsTopicId)
+            .setMessage(JSON.stringify(message))
+            .freezeWith(client);
+        const topicMsgSubmitTxSigned = await topicMsgSubmitTx.sign(metricsAccountKeyObj);
+        const topicMsgSubmitTxSubmitted = await topicMsgSubmitTxSigned.execute(client);
+        /* const topicMsgSubmitTxReceipt = */ await topicMsgSubmitTxSubmitted.getReceipt(client);
+        // const topicMsgSeqNum = topicMsgSubmitTxReceipt.topicSequenceNumber;
+    } catch (ex) {
+        console.error('Failed to track', action, detail);
+    }
+    if (client) {
+        client.close();
+    }
 }
 
 module.exports = {
