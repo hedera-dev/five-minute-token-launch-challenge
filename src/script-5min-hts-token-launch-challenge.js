@@ -16,6 +16,7 @@ import {
 
 const tutorialId = '5MHTSTLC-MAIN';
 let client;
+let marker = 'initial';
 
 async function script5minHtsTokenLaunchChallenge() {
     metricsTrackOnHcs('script5minHtsTokenLaunchChallenge', 'run');
@@ -24,6 +25,7 @@ async function script5minHtsTokenLaunchChallenge() {
 
     // Read in environment variables from `.env` file in parent directory
     dotenv.config({ path: '../.env' });
+    marker = 'read-dotenv';
 
     // Initialise the operator account
     const yourName = process.env.YOUR_NAME;
@@ -38,6 +40,7 @@ async function script5minHtsTokenLaunchChallenge() {
     console.log('Using your name as:', yourName);
     console.log('Using account:', operatorIdStr);
     console.log('');
+    marker = 'operator';
 
     blueLog('Configuring the new HTS token');
     const name = '';
@@ -46,6 +49,7 @@ async function script5minHtsTokenLaunchChallenge() {
     if (!name || !symbol || initialSupply < 1) {
         throw new Error('Must configure a name, symbol, and initial supply for the new token.');
     }
+    marker = 'config-vars';
 
     const tokenCreateTx = await new TokenCreateTransaction()
         .setTransactionMemo(tutorialId)
@@ -68,6 +72,7 @@ async function script5minHtsTokenLaunchChallenge() {
     const tokenCreateTxHashscanUrl = `https://hashscan.io/testnet/transaction/${tokenCreateTxId.toString()}`;
     console.log('The token create transaction Hashscan URL: ', tokenCreateTxHashscanUrl);
     console.log('');
+    marker = 'token-create-tx';
 
     blueLog('Creating the new HTS token');
     // Sign the transaction with the account key that will be paying for this transaction
@@ -75,9 +80,11 @@ async function script5minHtsTokenLaunchChallenge() {
 
     // Submit the transaction to the Hedera Testnet
     const tokenCreateTxSubmitted = await tokenCreateTxSigned.execute(client);
+    marker = 'token-create-tx-execute';
 
     // Get the transaction receipt
     const tokenCreateTxReceipt = await tokenCreateTxSubmitted.getReceipt(client);
+    marker = 'token-create-tx-receipt';
 
     // Get the token ID
     const tokenId = tokenCreateTxReceipt.tokenId;
@@ -96,5 +103,5 @@ script5minHtsTokenLaunchChallenge().catch((ex) => {
         client.close();
     }
     console.error(ex);
-    metricsTrackOnHcs('script5minHtsTokenLaunchChallenge', 'error');
+    metricsTrackOnHcs('script5minHtsTokenLaunchChallenge', `error-after-marker-${marker}`);
 });
