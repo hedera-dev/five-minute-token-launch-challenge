@@ -11,9 +11,10 @@ const {
 } = require('@hashgraph/sdk');
 
 const DEFAULT_VALUES = {
-    dotEnvFilePath: path.resolve(__dirname, '../.metrics.env'),
-    metricsAccountId: '0.0.4515983',
-    metricsAccountKey: '3030020100300706052b8104000a0422042084ef968aa153ace24ed5a6299dfaa7c9e123be03a4ad95b937be3c1dc281aee6',
+    mainDotEnvFilePath: path.resolve(__dirname, '../.env'),
+    metricsDotEnvFilePath: path.resolve(__dirname, '../.metrics.env'),
+    metricsAccountId: '',
+    metricsAccountKey: '',
     metricsHcsTopicId: '0.0.4576382',
     metricsHcsTopicMemo: '5MHTSTLC',
 };
@@ -85,21 +86,34 @@ async function queryAccountByPrivateKey(privateKeyStr) {
 
 async function getMetricsConfig() {
     // read in current metrics config
-    dotenv.config({ path: DEFAULT_VALUES.dotEnvFilePath });
+    dotenv.config({
+        path: [DEFAULT_VALUES.metricsDotEnvFilePath, DEFAULT_VALUES.mainDotEnvFilePath],
+        override: true,
+    });
 
     // read ID, account credentials and HCS topic ID from config
     // falling back on defaults in not present
     const metricsId = process.env.METRICS_ID ||
         crypto.randomBytes(16).toString('hex');
-    const metricsAccountId = process.env.METRICS_ACCOUNT_ID ||
-        DEFAULT_VALUES.metricsAccountId;
-    const metricsAccountKey = process.env.METRICS_ACCOUNT_PRIVATE_KEY ||
-        DEFAULT_VALUES.metricsAccountKey;
+    const metricsAccountId =
+        process.env.METRICS_ACCOUNT_ID ||
+        DEFAULT_VALUES.metricsAccountId ||
+        process.env.OPERATOR_ACCOUNT_ID;
+    const metricsAccountKey =
+        process.env.METRICS_ACCOUNT_PRIVATE_KEY ||
+        DEFAULT_VALUES.metricsAccountKey ||
+        process.env.OPERATOR_ACCOUNT_PRIVATE_KEY;
     const metricsHcsTopicId = process.env.METRICS_HCS_TOPIC_ID ||
         DEFAULT_VALUES.metricsHcsTopicId;
-    const metricsAccountIdObj = AccountId.fromString(metricsAccountId);
-    const metricsAccountKeyObj = PrivateKey.fromStringDer(metricsAccountKey);
-    const client = Client.forTestnet().setOperator(metricsAccountIdObj, metricsAccountKeyObj);
+
+    let client;
+    let metricsAccountIdObj;
+    let metricsAccountKeyObj;
+    if (metricsAccountId && metricsAccountKey) {
+        metricsAccountIdObj = AccountId.fromString(metricsAccountId);
+        metricsAccountKeyObj = PrivateKey.fromStringECDSA(metricsAccountKey);
+        client = Client.forTestnet().setOperator(metricsAccountIdObj, metricsAccountKeyObj);
+    }
 
     return {
         metricsId,
@@ -121,12 +135,12 @@ async function saveMetricsConfig({
     // save/ overwrite config file
     const dotEnvFileText =
 `
-METRICS_ID=${metricsId}
-METRICS_ACCOUNT_ID=${metricsAccountId}
-METRICS_ACCOUNT_PRIVATE_KEY=${metricsAccountKey}
-METRICS_HCS_TOPIC_ID=${metricsHcsTopicId}
+METRICS_ID=${metricsId || ''}
+METRICS_ACCOUNT_ID=${metricsAccountId || ''}
+METRICS_ACCOUNT_PRIVATE_KEY=${metricsAccountKey || ''}
+METRICS_HCS_TOPIC_ID=${metricsHcsTopicId || ''}
 `;
-    const fileName = DEFAULT_VALUES.dotEnvFilePath;
+    const fileName = DEFAULT_VALUES.metricsDotEnvFilePath;
     await fs.writeFile(fileName, dotEnvFileText);
 }
 
@@ -159,10 +173,14 @@ async function metricsTopicCreate() {
     });
 }
 
+const metricsMessages = [];
+
 async function metricsTrackOnHcs(action, detail) {
     if (typeof action !== 'string' || typeof detail !== 'string') {
         throw new Error();
     }
+    const timeStamp = Date.now();
+
     let client;
 
     try {
@@ -176,6 +194,15 @@ async function metricsTrackOnHcs(action, detail) {
         } = metricsConfig;
         client = metricsConfig.client;
 
+        // Save the message in a queue immediately
+        const metricsMessage = {
+            id: metricsId,
+            action,
+            detail,
+            time: timeStamp,
+        };
+        metricsMessages.push(metricsMessage);
+
         await saveMetricsConfig({
             metricsId,
             metricsAccountId,
@@ -184,20 +211,23 @@ async function metricsTrackOnHcs(action, detail) {
         });
 
         // Submit metrics message to HCS topic
-        const message = {
-            id: metricsId,
-            action,
-            detail,
-            time: Date.now(),
-        };
-        const topicMsgSubmitTx = await new TopicMessageSubmitTransaction()
-            .setTopicId(metricsHcsTopicId)
-            .setMessage(JSON.stringify(message))
-            .freezeWith(client);
-        const topicMsgSubmitTxSigned = await topicMsgSubmitTx.sign(metricsAccountKeyObj);
-        const topicMsgSubmitTxSubmitted = await topicMsgSubmitTxSigned.execute(client);
-        /* const topicMsgSubmitTxReceipt = */ await topicMsgSubmitTxSubmitted.getReceipt(client);
-        // const topicMsgSeqNum = topicMsgSubmitTxReceipt.topicSequenceNumber;
+        if (client) {
+            do {
+                const nextMetricsMessage = metricsMessages.shift();
+                // Track directly on HCS
+                const topicMsgSubmitTx = await new TopicMessageSubmitTransaction()
+                    .setTopicId(metricsHcsTopicId)
+                    .setMessage(JSON.stringify(nextMetricsMessage))
+                    .freezeWith(client);
+                const topicMsgSubmitTxSigned = await topicMsgSubmitTx.sign(metricsAccountKeyObj);
+                const topicMsgSubmitTxSubmitted = await topicMsgSubmitTxSigned.execute(client);
+                const topicMsgSubmitTxReceipt = await topicMsgSubmitTxSubmitted.getReceipt(client);
+                // const topicMsgSeqNum = topicMsgSubmitTxReceipt.topicSequenceNumber;
+            } while (metricsMessages.length > 0);
+        }
+        // When `client` is not initialised, the `metricsMessage` is
+        // already tracked in memory, and will be submitted to HCS at a later time
+        // when `client` is available.
     } catch (ex) {
         console.error('Failed to track', action, detail);
     }

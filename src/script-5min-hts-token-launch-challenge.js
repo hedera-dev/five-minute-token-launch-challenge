@@ -15,6 +15,7 @@ import {
 } from '../util/util.js';
 
 const tutorialId = '5MHTSTLC-MAIN';
+let client;
 
 async function script5minHtsTokenLaunchChallenge() {
     metricsTrackOnHcs('script5minHtsTokenLaunchChallenge', 'run');
@@ -33,12 +34,12 @@ async function script5minHtsTokenLaunchChallenge() {
     }
     const operatorId = AccountId.fromString(operatorIdStr);
     const operatorKey = PrivateKey.fromStringECDSA(operatorKeyStr);
-    const client = Client.forTestnet().setOperator(operatorId, operatorKey);
+    client = Client.forTestnet().setOperator(operatorId, operatorKey);
     console.log('Using your name as:', yourName);
     console.log('Using account:', operatorIdStr);
     console.log('');
 
-    blueLog('Configuring the new HTS token' + HELLIP_CHAR);
+    blueLog('Configuring the new HTS token');
     const name = '';
     const symbol = '';
     const initialSupply = 0;
@@ -90,4 +91,10 @@ async function script5minHtsTokenLaunchChallenge() {
     metricsTrackOnHcs('script5minHtsTokenLaunchChallenge', 'complete');
 }
 
-script5minHtsTokenLaunchChallenge();
+script5minHtsTokenLaunchChallenge().catch((ex) => {
+    if (client) {
+        client.close();
+    }
+    console.error(ex);
+    metricsTrackOnHcs('script5minHtsTokenLaunchChallenge', 'error');
+});
