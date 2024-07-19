@@ -21,8 +21,8 @@ const DEFAULT_VALUES = {
 const ANSI_ESCAPE_CODE_BLUE = '\x1b[34m%s\x1b[0m';
 const HELLIP_CHAR = '…';
 
-function blueLog(str) {
-    console.log(ANSI_ESCAPE_CODE_BLUE, '🔵', str);
+function blueLog(...strings) {
+    console.log(ANSI_ESCAPE_CODE_BLUE, '🔵', ...strings, HELLIP_CHAR);
 }
 
 function convertTransactionIdForMirrorNodeApi(txId) {
@@ -31,6 +31,56 @@ function convertTransactionIdForMirrorNodeApi(txId) {
     txIdB = txIdB.replace('.', '-');
     const txIdMirrorNodeFormat = `${txIdA}-${txIdB}`;
     return txIdMirrorNodeFormat;
+}
+
+async function queryAccountByEvmAddress(evmAddress) {
+    let accountId;
+    let accountBalance;
+    let accountEvmAddress;
+    const accountFetchApiUrl =
+        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${evmAddress}?limit=1&order=asc&transactiontype=cryptotransfer&transactions=false`;
+    console.log('Fetching: ', accountFetchApiUrl);
+    try {
+        const accountFetch = await fetch(accountFetchApiUrl);
+        const accountObj = await accountFetch.json();
+        const account = accountObj;
+        accountId = account?.account;
+        accountBalance = account?.balance?.balance;
+        accountEvmAddress = account?.evm_address;
+    } catch (ex) {
+        // do nothing
+    }
+    return {
+        accountId,
+        accountBalance,
+        accountEvmAddress,
+    }
+}
+
+async function queryAccountByPrivateKey(privateKeyStr) {
+    const privateKeyObj = PrivateKey.fromStringECDSA(privateKeyStr);
+    const publicKey = `0x${ privateKeyObj.publicKey.toStringRaw() }`;
+    let accountId;
+    let accountBalance;
+    let accountEvmAddress;
+    const accountFetchApiUrl =
+        `https://testnet.mirrornode.hedera.com/api/v1/accounts?account.publickey=${publicKey}&balance=true&limit=1&order=desc`;
+    console.log('Fetching: ', accountFetchApiUrl);
+    try {
+        const accountFetch = await fetch(accountFetchApiUrl);
+        const accountObj = await accountFetch.json();
+        const account = accountObj?.accounts[0];
+        accountId = account?.account;
+        accountBalance = account?.balance?.balance;
+        accountEvmAddress = account?.evm_address;
+    } catch (ex) {
+        // do nothing
+    }
+    return {
+        accountId,
+        accountBalance,
+        accountEvmAddress,
+    }
 }
 
 async function getMetricsConfig() {
@@ -161,6 +211,8 @@ module.exports = {
     HELLIP_CHAR,
     blueLog,
     convertTransactionIdForMirrorNodeApi,
+    queryAccountByEvmAddress,
+    queryAccountByPrivateKey,
     metricsTopicCreate,
     metricsTrackOnHcs,
 };

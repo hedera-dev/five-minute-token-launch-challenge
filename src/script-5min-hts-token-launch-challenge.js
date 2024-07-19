@@ -10,7 +10,6 @@ import {
 } from '@hashgraph/sdk';
 import dotenv from 'dotenv';
 import {
-    HELLIP_CHAR,
     blueLog,
     metricsTrackOnHcs,
 } from '../util/util.js';
@@ -20,7 +19,7 @@ const tutorialId = '5MHTSTLC-MAIN';
 async function script5minHtsTokenLaunchChallenge() {
     metricsTrackOnHcs('script5minHtsTokenLaunchChallenge', 'run');
 
-    blueLog('Welcome to the 5 minute HTS token launch challenge!' + HELLIP_CHAR);
+    blueLog('Welcome to the 5 minute HTS token launch challenge!');
 
     // Read in environment variables from `.env` file in parent directory
     dotenv.config({ path: '../.env' });
@@ -69,7 +68,7 @@ async function script5minHtsTokenLaunchChallenge() {
     console.log('The token create transaction Hashscan URL: ', tokenCreateTxHashscanUrl);
     console.log('');
 
-    blueLog('Creating the new HTS token' + HELLIP_CHAR);
+    blueLog('Creating the new HTS token');
     // Sign the transaction with the account key that will be paying for this transaction
     const tokenCreateTxSigned = await tokenCreateTx.sign(operatorKey);
 

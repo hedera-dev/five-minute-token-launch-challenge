@@ -5,12 +5,13 @@ const fs = require('fs/promises');
 const path = require('path');
 const { stdin, stdout } = require('node:process');
 const {
-    PrivateKey,
     Mnemonic,
 } = require('@hashgraph/sdk');
 const dotenv = require('dotenv');
 const {
     metricsTrackOnHcs,
+    queryAccountByEvmAddress,
+    queryAccountByPrivateKey,
 } = require('../util/util.js');
 
 const DEFAULT_VALUES = {
@@ -81,56 +82,6 @@ ${accountsOutput}
 RPC_URL=${rpcUrl}
 `
     return output;
-}
-
-async function queryAccountByEvmAddress(evmAddress) {
-    let accountId;
-    let accountBalance;
-    let accountEvmAddress;
-    const accountFetchApiUrl =
-        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${evmAddress}?limit=1&order=asc&transactiontype=cryptotransfer&transactions=false`;
-    console.log('Fetching: ', accountFetchApiUrl);
-    try {
-        const accountFetch = await fetch(accountFetchApiUrl);
-        const accountObj = await accountFetch.json();
-        const account = accountObj;
-        accountId = account?.account;
-        accountBalance = account?.balance?.balance;
-        accountEvmAddress = account?.evm_address;
-    } catch (ex) {
-        // do nothing
-    }
-    return {
-        accountId,
-        accountBalance,
-        accountEvmAddress,
-    }
-}
-
-async function queryAccountByPrivateKey(privateKeyStr) {
-    const privateKeyObj = PrivateKey.fromStringECDSA(privateKeyStr);
-    const publicKey = `0x${ privateKeyObj.publicKey.toStringRaw() }`;
-    let accountId;
-    let accountBalance;
-    let accountEvmAddress;
-    const accountFetchApiUrl =
-        `https://testnet.mirrornode.hedera.com/api/v1/accounts?account.publickey=${publicKey}&balance=true&limit=1&order=desc`;
-    console.log('Fetching: ', accountFetchApiUrl);
-    try {
-        const accountFetch = await fetch(accountFetchApiUrl);
-        const accountObj = await accountFetch.json();
-        const account = accountObj?.accounts[0];
-        accountId = account?.account;
-        accountBalance = account?.balance?.balance;
-        accountEvmAddress = account?.evm_address;
-    } catch (ex) {
-        // do nothing
-    }
-    return {
-        accountId,
-        accountBalance,
-        accountEvmAddress,
-    }
 }
 
 async function getUsableAccount(privateKeyStr, evmAddress) {
