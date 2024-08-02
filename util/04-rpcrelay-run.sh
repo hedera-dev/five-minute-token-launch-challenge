@@ -1,7 +1,6 @@
 #!/bin/bash
 
 DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-node ${DIR}/07-metrics-message.js "rpcrelay-run" "begin"
 
 # get specific tag name for latest RPC relay
 export RPC_RELAY_VERSION=$( curl -L \
@@ -22,6 +21,3 @@ docker run \
   --publish 8547:8547 \
   --env-file ${DIR}/../.rpcrelay.env \
   "${RPC_RELAY_DOCKER_IMAGE}"
-
-# NOTE does not make sense to track when this completes, so skipping
-# node ${DIR}/07-metrics-message.js "rpcrelay-run" "complete"

@@ -5,14 +5,16 @@ const fs = require('fs/promises');
 const path = require('path');
 const { stdin, stdout } = require('node:process');
 const {
+    PrivateKey,
     Mnemonic,
 } = require('@hashgraph/sdk');
 const dotenv = require('dotenv');
 const {
-    metricsTrackOnHcs,
-    queryAccountByEvmAddress,
-    queryAccountByPrivateKey,
+    createLogger,
 } = require('../util/util.js');
+
+let logger;
+let client;
 
 const DEFAULT_VALUES = {
     dotEnvFilePath: path.resolve(__dirname, '../.env'),
@@ -22,7 +24,11 @@ const DEFAULT_VALUES = {
 };
 
 async function initDotEnvForApp() {
-    metricsTrackOnHcs('initDotEnvForApp', 'begin');
+    logger = await createLogger({
+        scriptId: 'initDotEnvForApp',
+        scriptCategory: 'setup',
+    });
+    logger.logStart('Initialise .env file - start');
 
     // prompt for inputs
     const {
@@ -32,17 +38,16 @@ async function initDotEnvForApp() {
 
     // write `.env` file if instructed
     if (allowOverwrite1stChar === 'y') {
-        console.log('OK, overwriting .env file');
+        logger.log('OK, overwriting .env file');
         const fileName = DEFAULT_VALUES.dotEnvFilePath;
         await fs.writeFile(fileName, dotEnvText);
-        metricsTrackOnHcs('initDotEnvForApp', 'overwrite');
+        logger.logComplete('Initialise .env file, overwrite - complete');
     } else {
-        console.log('OK, leaving current .env file as it was');
+        logger.logComplete('Initialise .env file, leave as-is - complete');
     }
 }
 
 function constructDotEnvFile({
-    yourName,
     operatorAccount,
     accounts,
     seedPhrase,
@@ -64,9 +69,6 @@ ACCOUNT_${accountIndex}_ID=${account.id}
 # as this file is stored as plain text on disk,
 # and is therefore not secure enough.
 
-# Name
-YOUR_NAME="${yourName}"
-
 # Operator account
 OPERATOR_ACCOUNT_PRIVATE_KEY=${operatorAccount.privateKey}
 OPERATOR_ACCOUNT_EVM_ADDRESS=${operatorAccount.evmAddress}
@@ -82,6 +84,56 @@ ${accountsOutput}
 RPC_URL=${rpcUrl}
 `
     return output;
+}
+
+async function queryAccountByEvmAddress(evmAddress) {
+    let accountId;
+    let accountBalance;
+    let accountEvmAddress;
+    const accountFetchApiUrl =
+        `https://testnet.mirrornode.hedera.com/api/v1/accounts/${evmAddress}?limit=1&order=asc&transactiontype=cryptotransfer&transactions=false`;
+    logger.log('Fetching: ', accountFetchApiUrl);
+    try {
+        const accountFetch = await fetch(accountFetchApiUrl);
+        const accountObj = await accountFetch.json();
+        const account = accountObj;
+        accountId = account?.account;
+        accountBalance = account?.balance?.balance;
+        accountEvmAddress = account?.evm_address;
+    } catch (ex) {
+        // do nothing
+    }
+    return {
+        accountId,
+        accountBalance,
+        accountEvmAddress,
+    }
+}
+
+async function queryAccountByPrivateKey(privateKeyStr) {
+    const privateKeyObj = PrivateKey.fromStringECDSA(privateKeyStr);
+    const publicKey = `0x${ privateKeyObj.publicKey.toStringRaw() }`;
+    let accountId;
+    let accountBalance;
+    let accountEvmAddress;
+    const accountFetchApiUrl =
+        `https://testnet.mirrornode.hedera.com/api/v1/accounts?account.publickey=${publicKey}&balance=true&limit=1&order=desc`;
+    logger.log('Fetching: ', accountFetchApiUrl);
+    try {
+        const accountFetch = await fetch(accountFetchApiUrl);
+        const accountObj = await accountFetch.json();
+        const account = accountObj?.accounts[0];
+        accountId = account?.account;
+        accountBalance = account?.balance?.balance;
+        accountEvmAddress = account?.evm_address;
+    } catch (ex) {
+        // do nothing
+    }
+    return {
+        accountId,
+        accountBalance,
+        accountEvmAddress,
+    }
 }
 
 async function getUsableAccount(privateKeyStr, evmAddress) {
@@ -122,7 +174,6 @@ async function promptInputs() {
     } = process.env;
 
     let operatorAccount;
-    let yourName = YOUR_NAME;
     let operatorKey = OPERATOR_ACCOUNT_PRIVATE_KEY;
     let seedPhrase = SEED_PHRASE;
     let numAccounts = NUM_ACCOUNTS;
@@ -144,36 +195,20 @@ async function promptInputs() {
         restart = false;
         let use1stAccountAsOperator = false;
 
-        // prompt user for their preferred moniker
-        console.log('Enter your name or nickname');
-        if (yourName) {
-            console.log(`Current: "${yourName}"`);
-            console.log('(enter blank to re-use the above value)');
-        } else {
-            console.log('e.g. "bguiz"');
-        }
-        const inputYourName = await rlPrompt.question('> ');
-        yourName = inputYourName || yourName;
-        if (!yourName) {
-            console.error('Specified name is empty');
-            restart = true;
-            continue;
-        }
-
         // prompt for operator account private key
         // - user may opt for "none" in which case the 1st account
         //   generated from the BIP-39 seed phrase will be used instead
         // - user may opt to specify an account private key
         // - if private key is specified, validation will be performed,
         //   and account ID will be obtained from there (no need to ask user to input)
-        console.log('Enter your operator account (ECDSA) private key');
+        logger.log('Enter your operator account (ECDSA) private key');
         if (operatorKey) {
-            console.log(`Current: "${operatorKey}"`);
-            console.log('(enter blank to re-use the above value)');
+            logger.log(`Current: "${operatorKey}"`);
+            logger.log('(enter blank to re-use the above value)');
         } else {
-            console.log('e.g. "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"');
+            logger.log('e.g. "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"');
         }
-        console.log('(enter "none" to use first account from BIP-39 seed phrase as operator account)');
+        logger.log('(enter "none" to use first account from BIP-39 seed phrase as operator account)');
         const inputOperatorKey = await rlPrompt.question('> ');
         if (inputOperatorKey === 'none') {
             use1stAccountAsOperator = true;
@@ -199,12 +234,12 @@ async function promptInputs() {
         // prompt for BIP-39 seed phrase
         // - user may leave empty, and a new one will be generated at random
         // - user may specify a seed phrase, in which case it will be validated
-        console.log('Enter a BIP-39 seed phrase');
+        logger.log('Enter a BIP-39 seed phrase');
         if (seedPhrase) {
-            console.log(`Current: "${seedPhrase}"`);
-            console.log('(enter blank to re-use the above value)');
+            logger.log(`Current: "${seedPhrase}"`);
+            logger.log('(enter blank to re-use the above value)');
         } else {
-            console.log('(enter blank value generate a new one at random)');
+            logger.log('(enter blank value generate a new one at random)');
         }
         const inputSeedPhrase = await rlPrompt.question('> ');
         seedPhrase = inputSeedPhrase || seedPhrase;
@@ -215,7 +250,7 @@ async function promptInputs() {
             // generate new seed phrase
             mnemonic = await Mnemonic.generate12();
             seedPhrase = mnemonic.toString();
-            console.log('Randomly-generated seed phrase: ', seedPhrase);
+            logger.log('Randomly-generated seed phrase: ', seedPhrase);
         } else {
             // validate specified seed phrase
             let isValidatedSeedPhrase = true;
@@ -234,13 +269,13 @@ async function promptInputs() {
         // prompt for number of accounts desired
         // - the desired number of accounts will be generated (minimum  1)
         // - however these accounts will not yet have account IDs, until funded
-        console.log('Enter a number of accounts to generate from your BIP-39 seed phrase');
+        logger.log('Enter a number of accounts to generate from your BIP-39 seed phrase');
         if (numAccounts) {
-            console.log(`Current: "${numAccounts}"`);
-            console.log('(enter blank to re-use the above value)');
+            logger.log(`Current: "${numAccounts}"`);
+            logger.log('(enter blank to re-use the above value)');
         } else {
-            console.log(`Default: "${DEFAULT_VALUES.numAccounts}"`);
-            console.log('(enter blank value to use default value)');
+            logger.log(`Default: "${DEFAULT_VALUES.numAccounts}"`);
+            logger.log('(enter blank value to use default value)');
         }
         const inputNumAccounts = await rlPrompt.question('> ');
         numAccounts = inputNumAccounts || numAccounts || DEFAULT_VALUES.numAccounts;
@@ -272,11 +307,31 @@ async function promptInputs() {
                 id: '',
             };
         }
+
+        // prompt for RPC URL
+        // - defaults to localhost
+        // - on gitpod, `RPC_URL` env var is expected to be set prior to
+        //   invoking this script
+        logger.log('Enter your preferred JSON-RPC endpoint URL');
+        if (rpcUrl) {
+            logger.log(`Current: "${rpcUrl}"`);
+            logger.log('(enter blank to re-use the above value)');
+        } else {
+            logger.log(`Default: "${DEFAULT_VALUES.rpcUrl}"`);
+            logger.log('(enter blank value to use default value)');
+        }
+        const inputRpcUrl = await rlPrompt.question('> ');
+        if (!inputRpcUrl) {
+            rpcUrl = rpcUrl || DEFAULT_VALUES.rpcUrl;
+        } else {
+            rpcUrl = inputRpcUrl;
+        }
+
         if (use1stAccountAsOperator) {
             // first, give user the opportunity to fund this account
-            console.log(`Please ensure that you have funded ${accounts[0].evmAddress}`);
-            console.log('If this account has not yet been created or funded, you may do so via https://faucet.hedera.com');
-            console.log('(Simply enter a blank value to when this account is ready)');
+            logger.log(`Please ensure that you have funded ${accounts[0].evmAddress}`);
+            logger.log('If this account has not yet been created or funded, you may do so via https://faucet.hedera.com');
+            logger.log('(Simply enter a blank value to when this account is ready)');
             await rlPrompt.question('> '); // discard the response, no use for it
 
             // validate operator account details
@@ -292,45 +347,25 @@ async function promptInputs() {
             accounts[0].id = operatorAccount.id;
         }
 
-        // prompt for RPC URL
-        // - defaults to localhost
-        // - on gitpod, `RPC_URL` env var is expected to be set prior to
-        //   invoking this script
-        console.log('Enter your preferred JSON-RPC endpoint URL');
-        if (rpcUrl) {
-            console.log(`Current: "${rpcUrl}"`);
-            console.log('(enter blank to re-use the above value)');
-        } else {
-            console.log(`Default: "${DEFAULT_VALUES.rpcUrl}"`);
-            console.log('(enter blank value to use default value)');
-        }
-        const inputRpcUrl = await rlPrompt.question('> ');
-        if (!inputRpcUrl) {
-            rpcUrl = rpcUrl || DEFAULT_VALUES.rpcUrl;
-        } else {
-            rpcUrl = inputRpcUrl;
-        }
-
         // prompt for user to overwrite the file `.env` file
         // - prints out the proposed file
         // - user may select "yes", "no", or "restart"
         // - if restart is selected, this loop with prompts is repeated,
         //   allowing user to update input values
         dotEnvText = constructDotEnvFile({
-            yourName,
             operatorAccount,
             accounts,
             seedPhrase,
             numAccounts,
             rpcUrl,
         });
-        console.log(dotEnvText);
-        console.log('Do you wish to overwrite the .env file with the above?');
-        console.log('(restart/yes/No)');
+        logger.log(dotEnvText);
+        logger.log('Do you wish to overwrite the .env file with the above?');
+        logger.log('(restart/yes/No)');
         const inputAllowOverwrite = await rlPrompt.question('> ');
         allowOverwrite1stChar = inputAllowOverwrite.toLowerCase().charAt(0);
         if (allowOverwrite1stChar === 'r') {
-            console.log('OK, restarting...');
+            logger.log('OK, restarting...');
             restart = true;
         }
     } while (restart);
@@ -338,7 +373,6 @@ async function promptInputs() {
     rlPrompt.close();
 
     return {
-        yourName,
         operatorAccount,
         seedPhrase,
         numAccounts,
@@ -349,4 +383,7 @@ async function promptInputs() {
     };
 }
 
-initDotEnvForApp();
+initDotEnvForApp().catch((ex) => {
+    client && client.close();
+    logger ? logger.logError(ex) : console.error(ex);
+});
