@@ -22,13 +22,18 @@ Intended to be used as a common starting point for demo repos for tutorials.
 ### Steps
 
 1. Click on the "open in Gitpod" button to launch Gitpod
+   1. If this is your first time using Gitpod,
+      you'll need to create an account.
+      It does not take long - it is as simple as signing in with Github,
+      then authorising the Gitpod app.
 1. Wait for Gitpod to spin up a new instance (takes under 10 seconds)
 1. In the terminal, a script will prompt you to answer a few questions
-   1. Enter your name or nickname
    1. For private key, type `none` to use a newly generated account
    1. The newly generated accounts are derived from a seed phrase, leave blank to generate a random one
    1. Copy the address of the newly generated account to your clipboard
 1. Visit [`faucet.hedera.com`](https://faucet.hedera.com/) in a new browser tab/window
+   1. Note that if you have previously funded this particular account,
+      you may skip the following steps
    1. Paste the address of your newly generated account from your clipboard
    1. Press the "receive" button
    1. Clear the captcha challenge
@@ -40,12 +45,20 @@ Intended to be used as a common starting point for demo repos for tutorials.
    1. The RPC URL does not matter, just leave blank to accept the default
 1. In the file navigation pane, open the `.env` file to inspect the output of the script
 1. In the file navigation pane, open the `src/script-5min-hts-token-launch-challenge.js` file to edit its contents
-  1. Find the line `Configuring the new HTS token`
-  1. Under it, change the value of `name` to the name that you wish to give your fungible token
-  1. Change the value of `symbol` to the symbol that you wish to give your fungible token (this is typically an acronym or contraction of the name, and in all-caps, but that is up to you)
-  1. Finally, change the value of `initialSupply` to some large number, as this will be the total circulating supply of your token upon creation
+  1. Find the section `Configuring the new HTS token`.
+     The should be a comment which reads:
+     `// Set the token name, token symbol, and its initial supply (total number of tokens).`
+  1. Modify the values in the next 3 lines as follows:
+     1. Under it, change the value of `name` to the name that you
+        wish to give your fungible token
+     1. Change the value of `symbol` to the symbol that you wish to
+        give your fungible token (this is typically an acronym or contraction of the name,
+        and in all-caps, but that is up to you)
+     1. Finally, change the value of `initialSupply` to some large number,
+        as this will be the total circulating supply of your token upon creation
 1. In the terminal, enter the command `cd src`
-1. In the terminal, enter the command `./script-5min-hts-token-launch-challenge.js`
+1. In the terminal, run the following script: `./script-5minHtsTokenLaunchChallenge.js`
+   1. Shortcut: type `./script`, then hit the `[tab]` key to auto-complete
 1. This script sends a `TokenCreateTransaction` to the network, with the options that you provided when editing it, to create your token
 1. Copy the 2 Hashscan URLs from the terminal output, and open them in new browser tabs/windows
    1. For the transaction page, check that the transaction sent the tokens (the entire initial supply) to your account

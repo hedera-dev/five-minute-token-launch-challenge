@@ -37,7 +37,7 @@ async function script5minHtsTokenLaunchChallenge() {
     logger.log('Using account:', operatorIdStr);
 
     await logger.logSectionWithWaitPrompt('Configuring the new HTS token');
-
+    // Set the token name, token symbol, and its initial supply (total number of tokens).
     const name = '';
     const symbol = '';
     const initialSupply = 0;
