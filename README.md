@@ -28,8 +28,17 @@ Intended to be used as a common starting point for demo repos for tutorials.
       then authorising the Gitpod app.
 1. Wait for Gitpod to spin up a new instance (takes under 10 seconds)
 1. In the terminal, a script will prompt you to answer a few questions
-   1. For private key, type `none` to use a newly generated account
-   1. The newly generated accounts are derived from a seed phrase, leave blank to generate a random one
+   1. The newly generated accounts are derived from a seed phrase:
+      Leave blank to generate a random one
+   1. Number of accounts are derived from a seed phrase:
+      Leave blank to accept the default
+   1. RPC URL:
+      Leave blank to accept the default
+   1. Private key:
+      Leave blank to accept the default, which is to use the first account generated earlier
+      - Note that you may alternatively use the "HEX Encoded Private Key" of the "ECDSA Account"
+        from [`portal.hedera.com`](https://portal.hedera.com/dashboard).
+        This option requires a few extra minutes.
    1. Copy the address of the newly generated account to your clipboard
 1. Visit [`faucet.hedera.com`](https://faucet.hedera.com/) in a new browser tab/window
    1. Note that if you have previously funded this particular account,
@@ -42,9 +51,8 @@ Intended to be used as a common starting point for demo repos for tutorials.
 1. Switch back to your Gitpod instance, and in the terminal continue answering the questions prompted by the script
    1. Simply hit the "enter" key, now that you have funded this account
    1. The script will automatically work out the account ID for you (no need to copy paste it)
-   1. The RPC URL does not matter, just leave blank to accept the default
 1. In the file navigation pane, open the `.env` file to inspect the output of the script
-1. In the file navigation pane, open the `src/script-5min-hts-token-launch-challenge.js` file to edit its contents
+1. In the file navigation pane, open the `src/script-5minHtsTokenLaunchChallenge.js` file to edit its contents
   1. Find the section `Configuring the new HTS token`.
      The should be a comment which reads:
      `// Set the token name, token symbol, and its initial supply (total number of tokens).`
