@@ -36,7 +36,7 @@ async function script5minHtsTokenLaunchChallenge() {
     client = Client.forTestnet().setOperator(operatorId, operatorKey);
     logger.log('Using account:', operatorIdStr);
 
-    await logger.logSectionWithWaitPrompt('Configuring the new HTS token');
+    await logger.logSection('Configuring the new HTS token');
     // Set the token name, token symbol, and its initial supply (total number of tokens).
     const name = '';
     const symbol = '';
@@ -65,7 +65,7 @@ async function script5minHtsTokenLaunchChallenge() {
     const tokenCreateTxHashscanUrl = `https://hashscan.io/testnet/transaction/${tokenCreateTxId.toString()}`;
     logger.log('The token create transaction Hashscan URL: ', ...logger.applyAnsi('URL', tokenCreateTxHashscanUrl));
 
-    await logger.logSectionWithWaitPrompt('Creating the new HTS token');
+    await logger.logSection('Creating the new HTS token');
     // Sign the transaction with the account key that will be paying for this transaction
     const tokenCreateTxSigned = await tokenCreateTx.sign(operatorKey);
     // Submit the signed transaction to the Hedera Testnet
@@ -77,7 +77,7 @@ async function script5minHtsTokenLaunchChallenge() {
     logger.log('The new token ID:', tokenId.toString());
     client.close();
 
-    await logger.logSectionWithWaitPrompt('View the new HTS token on Hashscan');
+    await logger.logSection('View the new HTS token on Hashscan');
     // Display the Hashscan URL
     const tokenHashscanUrl = `https://hashscan.io/testnet/token/${tokenId.toString()}`;
     logger.log('The new token Hashscan URL:', ...logger.applyAnsi('URL', tokenHashscanUrl));
