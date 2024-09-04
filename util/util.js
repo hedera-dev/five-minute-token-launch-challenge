@@ -867,6 +867,7 @@ module.exports = {
   getVersionStamp,
   getBaseTemplateVersionStamp,
   createLogger,
+  readLoggerFile,
   writeLoggerFile,
   logMetricsSummary,
 
