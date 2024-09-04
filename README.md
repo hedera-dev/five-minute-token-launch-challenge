@@ -52,7 +52,7 @@ Intended to be used as a common starting point for demo repos for tutorials.
    1. Simply hit the "enter" key, now that you have funded this account
    1. The script will automatically work out the account ID for you (no need to copy paste it)
 1. In the file navigation pane, open the `.env` file to inspect the output of the script
-1. In the file navigation pane, open the `src/script-5minHtsTokenLaunchChallenge.js` file to edit its contents
+1. In the file navigation pane, open the `src/script-five-min-token-launch.js` file to edit its contents
   1. Find the section `Configuring the new HTS token`.
      The should be a comment which reads:
      `// Set the token name, token symbol, and its initial supply (total number of tokens).`
@@ -65,7 +65,7 @@ Intended to be used as a common starting point for demo repos for tutorials.
      1. Finally, change the value of `initialSupply` to some large number,
         as this will be the total circulating supply of your token upon creation
 1. In the terminal, enter the command `cd src`
-1. In the terminal, run the following script: `./script-5minHtsTokenLaunchChallenge.js`
+1. In the terminal, run the following script: `./script-five-min-token-launch.js`
    1. Shortcut: type `./script`, then hit the `[tab]` key to auto-complete
 1. This script sends a `TokenCreateTransaction` to the network, with the options that you provided when editing it, to create your token
 1. Copy the 2 Hashscan URLs from the terminal output, and open them in new browser tabs/windows

@@ -363,6 +363,8 @@ async function createLogger({
           ANSI.RESET,
           CHARS.HELLIP,
         ];
+      case 'BOLD':
+        return [ANSI.BRIGHT, ...strings, ANSI.RESET];
       case 'URL':
         if (strings.length === 1 && typeof strings[0] === 'string') {
           return [
@@ -867,6 +869,7 @@ module.exports = {
   getVersionStamp,
   getBaseTemplateVersionStamp,
   createLogger,
+  readLoggerFile,
   writeLoggerFile,
   logMetricsSummary,
 
