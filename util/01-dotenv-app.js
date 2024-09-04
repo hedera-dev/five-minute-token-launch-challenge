@@ -322,7 +322,8 @@ async function promptInputs() {
 
     // first, give user the opportunity to fund this account
     logger.log(
-      `Please ensure that you have funded ${operatorAccountEvmAddress}`,
+      'Please ensure that you have funded',
+      ...logger.applyAnsi('BOLD', operatorAccountEvmAddress),
     );
     logger.log(
       'If this account has not yet been created or funded, you may do so via',
